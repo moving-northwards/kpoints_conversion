@@ -1,0 +1,48 @@
+#!/bin/bash
+
+## Put in your own standard script for calling vasp for your set up
+## The following is an example for running vasp on a cluster
+## This example would use the input files in the current directory
+## This job would be started with: qsub simple_kpoint_vasp.script
+
+#########################
+#PBS -q XXXX
+#PBS -N XXXX
+#PBS -l nodes=X:ppn=X
+
+module load intel/14.0.1
+module load intelmpi/4.1.0.024
+module load vasp/intelmpi/5.4.1
+
+cd $PBS_O_WORKDIR
+ulimit -s unlimited
+
+#########################
+## KPOINT LOOP ##
+#########################
+
+## Example where multiple calculations are run in sequence, 
+## each with increasing number of k-points (here from 2 to 8).
+## A summary file is produced at the end,
+## This lists the value of the kpoint and the resulting total energy.
+## Use the python script to quickly plot the summary and asses your k-point conversion.
+## Ofcourse if system not cubic, each reciprocal lattice vector may be looked at separately. 
+
+for k in `seq 2 1 8`
+do 
+cat > KPOINTS <<!
+Automatic mesh 
+ 0
+Gamma
+ $k $k $k
+ 0  0  0 
+!
+
+mpirun vasp_std > logfile
+
+E=`grep "TOTEN" OUTCAR | tail -1 | awk '{print $5 }'`
+echo $k $E >>summary
+
+mv logfile logfile_$k
+
+done
